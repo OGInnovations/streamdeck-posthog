@@ -32,6 +32,29 @@ export type InsightSettings = {
 	prefix?: string;
 	/** Text placed after the value, e.g. `%`. */
 	suffix?: string;
+
+	/* Appearance */
+
+	/** Colour palette name, or `custom` to use the colours below. */
+	theme?: string;
+	/** Background colour, used when `theme` is `custom`. */
+	bgColor?: string;
+	/** Value colour, used when `theme` is `custom`. */
+	valueColor?: string;
+	/** Caption colour, used when `theme` is `custom`. */
+	captionColor?: string;
+	/** Sparkline colour, used when `theme` is `custom`. */
+	accentColor?: string;
+	/** Draw the caption above the value. Defaults to on. */
+	showCaption?: boolean;
+	/** Draw the trend sparkline. Defaults to on. */
+	showSparkline?: boolean;
+	/** Draw the change against the previous point. Defaults to off. */
+	showDelta?: boolean;
+	/** Treat a falling value as the good direction, e.g. for error rates. */
+	invertTrend?: boolean;
+	/** Cap on the value's font size; 0 or blank means auto. */
+	valueSize?: number;
 };
 
 /** Lower bound on polling, to stay well inside PostHog's API rate limits. */

@@ -8,11 +8,13 @@
  * working when the user switches the insight's display mode.
  */
 
-/** A value read from an insight, plus the series label it came from. */
+/** A value read from an insight, plus the context needed to draw it. */
 export type InsightValue = {
 	value: number;
 	/** Series name from PostHog, when it provides one. */
 	seriesLabel?: string;
+	/** The series over time, when the insight graphs one, for the sparkline. */
+	points?: number[];
 };
 
 function firstNumber(...candidates: unknown[]): number | undefined {
@@ -45,6 +47,7 @@ function fromSeries(series: unknown): InsightValue | undefined {
 	return {
 		value,
 		seriesLabel: typeof label === "string" ? label : undefined,
+		points: data?.every((point) => typeof point === "number") ? (data as number[]) : undefined,
 	};
 }
 
@@ -64,4 +67,26 @@ export function extractValue(result: unknown, seriesIndex = 0): InsightValue | u
 		return extractValue(result[index], 0) ?? fromSeries(result[index]);
 	}
 	return fromSeries(result);
+}
+
+/**
+ * The change between the last two points of a series.
+ *
+ * Note that the final point of a PostHog trend is usually the period in
+ * progress, so this compares an incomplete period against a complete one. It
+ * answers "how does today compare with yesterday so far", which is what a
+ * glanceable key wants, but it is not a like-for-like comparison.
+ * @param points The series over time.
+ * @returns The change as a fraction, or `undefined` when it cannot be computed.
+ */
+export function changeFrom(points: number[] | undefined): number | undefined {
+	if (!points || points.length < 2) {
+		return undefined;
+	}
+	const latest = points[points.length - 1]!;
+	const previous = points[points.length - 2]!;
+	if (!Number.isFinite(latest) || !Number.isFinite(previous) || previous === 0) {
+		return undefined;
+	}
+	return (latest - previous) / Math.abs(previous);
 }

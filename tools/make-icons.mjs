@@ -11,6 +11,8 @@ import { dirname } from "node:path";
 
 const ORANGE = [0xf5, 0x4e, 0x00];
 const WHITE = [0xff, 0xff, 0xff];
+/** Matches the dark theme the plugin renders keys with. */
+const DARK = [0x1c, 0x1c, 0x21];
 
 function crc32(buf) {
 	let c = ~0;
@@ -54,10 +56,10 @@ function encodePng(width, height, rgba) {
  * Draws the glyph. `transparentBackground` is used for action icons, which sit
  * on Stream Deck's own chrome and are expected to be monochrome-on-transparent.
  */
-function draw(size, { transparentBackground }) {
+function draw(size, { transparentBackground, dark }) {
 	const rgba = Buffer.alloc(size * size * 4);
-	const bg = transparentBackground ? [0, 0, 0, 0] : [...ORANGE, 0xff];
-	const fg = transparentBackground ? [...WHITE, 0xff] : [...WHITE, 0xff];
+	const bg = transparentBackground ? [0, 0, 0, 0] : dark ? [...DARK, 0xff] : [...ORANGE, 0xff];
+	const fg = dark ? [...ORANGE, 0xff] : [...WHITE, 0xff];
 
 	const set = (x, y, [r, g, b, a]) => {
 		if (x < 0 || y < 0 || x >= size || y >= size) return;
@@ -93,13 +95,13 @@ const targets = [
 	// Action icon in the actions list.
 	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/icon.png", 20, true],
 	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/icon@2x.png", 40, true],
-	// Default key image.
-	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/key.png", 72, false],
-	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/key@2x.png", 144, false],
+	// Default key image, shown before a key is configured; matches the dark theme.
+	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/key.png", 72, false, true],
+	["io.ogin.streamdeck.posthog.sdPlugin/imgs/actions/insight/key@2x.png", 144, false, true],
 ];
 
-for (const [file, size, transparentBackground] of targets) {
+for (const [file, size, transparentBackground, dark = false] of targets) {
 	mkdirSync(dirname(file), { recursive: true });
-	writeFileSync(file, draw(size, { transparentBackground }));
+	writeFileSync(file, draw(size, { transparentBackground, dark }));
 	console.log(`${file} (${size}x${size})`);
 }

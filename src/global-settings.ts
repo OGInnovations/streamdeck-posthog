@@ -17,6 +17,26 @@ import type { GlobalSettings } from "./settings.js";
 let cached: GlobalSettings = {};
 const listeners = new Set<() => void>();
 
+let markReady: () => void;
+const ready = new Promise<void>((resolve) => {
+	markReady = resolve;
+});
+
+/** How long a key waits for the settings before drawing without them. */
+const READY_TIMEOUT_MS = 3000;
+
+/**
+ * Resolves once the settings have been read, so a key appearing during startup
+ * does not draw "Connect" for a moment before its value arrives.
+ *
+ * Resolves anyway after a short wait: a key that renders without settings shows
+ * a prompt to connect, which is far better than a key that never renders.
+ * @returns A promise that always resolves.
+ */
+export function whenSettingsReady(): Promise<void> {
+	return Promise.race([ready, new Promise<void>((resolve) => setTimeout(resolve, READY_TIMEOUT_MS).unref?.())]);
+}
+
 /**
  * Determines whether two sets of settings differ in a way that affects
  * requests. Used to avoid redundant refreshes when Stream Deck re-sends
@@ -61,4 +81,5 @@ export async function initGlobalSettings(): Promise<void> {
 	});
 
 	cached = (await streamDeck.settings.getGlobalSettings<GlobalSettings>()) ?? {};
+	markReady();
 }

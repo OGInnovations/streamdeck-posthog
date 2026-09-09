@@ -4,7 +4,7 @@ import { InsightValue } from "./actions/insight.js";
 import { initGlobalSettings, onConnectionChange } from "./global-settings.js";
 import { clearCache } from "./posthog/client.js";
 
-streamDeck.logger.setLevel("debug");
+streamDeck.logger.setLevel("info");
 
 const insightValue = new InsightValue();
 streamDeck.actions.registerAction(insightValue);

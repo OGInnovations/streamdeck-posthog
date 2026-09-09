@@ -20,6 +20,35 @@ The host and project ID under **PostHog connection** are shared by every key, so
 they only need entering once. A pasted insight URL always wins over them, which
 is how a single Stream Deck can mix Cloud US, Cloud EU and self-hosted projects.
 
+## Appearance
+
+Each key is drawn by the plugin as an SVG image rather than handed to Stream
+Deck as a title, because a title gives one font size and one colour for the
+whole thing, which leaves the value and its caption competing for the same
+72x72 space. Generating the image allows a hierarchy: a large value, a quiet
+caption above it, a trend line beneath.
+
+Per key, the property inspector offers:
+
+| Setting | Notes |
+| --- | --- |
+| **Theme** | Dark, Light, PostHog orange, Midnight, Mint, or Custom |
+| **Custom colours** | Background, value, caption and sparkline, shown when the theme is Custom |
+| **Value size** | Automatic (fills the key) or a fixed Small / Medium / Large |
+| **Caption** | Your own text, or the insight's series name by default; can be hidden |
+| **Trend sparkline** | Plots the insight's series along the bottom of the key |
+| **Change vs previous point** | Adds an arrow and a percentage |
+| **Falling is good** | Flips the trend colours, for metrics like error rate |
+| **Abbreviate / decimals / prefix / suffix** | Number formatting |
+
+The value is scaled to fit the key, so `1,284,553` shrinks rather than
+overflowing, and a value with nothing else on the key is drawn larger.
+
+The "change vs previous point" figure compares the last two points of the
+series. The final point of a PostHog trend is usually the period still in
+progress, so it reads as "today so far versus yesterday" rather than a
+like-for-like comparison — which is why it is off by default.
+
 ## Which number does it show?
 
 Insight results are not one shape, so the plugin probes in order of
@@ -51,9 +80,12 @@ npx streamdeck link io.ogin.streamdeck.posthog.sdPlugin
 npx streamdeck restart io.ogin.streamdeck.posthog
 ```
 
-Plugin logs land in `io.ogin.streamdeck.posthog.sdPlugin/logs/`. The log level
-is currently `debug` for development; lower it to `info` in `src/plugin.ts`
-before packaging for the Marketplace.
+Plugin logs land in `io.ogin.streamdeck.posthog.sdPlugin/logs/`. Raise the
+level to `debug` in `src/plugin.ts` to trace what each key renders and why.
+
+Key designs can be previewed without a Stream Deck: render the SVG for a set of
+states and rasterise it with `qlmanage -t -s 288 -o . key.svg`. That is how the
+themes were checked.
 
 ### Settings and event loops
 
@@ -79,7 +111,9 @@ which is what the Marketplace accepts. Before submitting:
 - Register for a Maker account at <https://marketplace.elgato.com/maker> and
   create the plugin listing under the UUID `io.ogin.streamdeck.posthog`. **The
   UUID is permanent once published**, so it must stay on a domain you control.
-- Replace the generated placeholder artwork in `imgs/` with real artwork. The
+- Replace the generated placeholder artwork in `imgs/` with real artwork. Note
+  that these images are only the action list and Marketplace listing — the keys
+  themselves are drawn at runtime. The
   Marketplace listing additionally wants screenshots and a plugin description
   beyond what `manifest.json` carries.
 - Add the `URL` field back to `manifest.json` pointing at the public repository

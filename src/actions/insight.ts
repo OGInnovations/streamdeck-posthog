@@ -7,10 +7,13 @@ import streamDeck, {
 	type WillDisappearEvent,
 } from "@elgato/streamdeck";
 
-import { buildTitle, formatValue } from "../format.js";
-import { globalSettings } from "../global-settings.js";
+import { formatValue } from "../format.js";
+import { globalSettings, whenSettingsReady } from "../global-settings.js";
 import { fetchInsightValue, PostHogError, type Connection } from "../posthog/client.js";
+import { changeFrom } from "../posthog/extract.js";
 import { parseInsightRef } from "../posthog/insight-ref.js";
+import { renderError, renderSetup, renderValue, type KeyStyle } from "../render/key-image.js";
+import type { ThemeName } from "../render/theme.js";
 import { refreshInterval, type InsightSettings } from "../settings.js";
 
 /** Per-key state: the key's settings and its poll timer. */
@@ -85,6 +88,19 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 		await this.#render(target, settings);
 	}
 
+	/**
+	 * Draws a rendered image on the key.
+	 *
+	 * The title is cleared alongside it: Stream Deck composites the title over
+	 * the image, so any title left behind would sit on top of the value.
+	 * @param target The key to draw on.
+	 * @param image Data URI of the rendered image.
+	 */
+	async #draw(target: Target, image: string): Promise<void> {
+		await target.setImage(image);
+		await target.setTitle("");
+	}
+
 	#stop(id: string): void {
 		const instance = this.#instances.get(id);
 		if (instance) {
@@ -101,10 +117,13 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	 * @returns `true` when a value was drawn, `false` when the key shows a problem.
 	 */
 	async #render(target: Target, settings: InsightSettings, options: { force?: boolean } = {}): Promise<boolean> {
+		await whenSettingsReady();
+
 		const ref = parseInsightRef(settings.insight);
+		const style = keyStyle(settings);
 		streamDeck.logger.debug(`Rendering ${target.id}: insight=${ref?.shortId ?? "unset"}`);
 		if (!ref) {
-			await target.setTitle(buildTitle("⚙", "Pick insight"));
+			await this.#draw(target, renderSetup("Pick insight", style));
 			return false;
 		}
 
@@ -118,7 +137,7 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 			streamDeck.logger.debug(
 				`Incomplete connection: host=${!!host} project=${!!projectId} key=${!!apiKey}`,
 			);
-			await target.setTitle(buildTitle("⚙", "Connect"));
+			await this.#draw(target, renderSetup("Connect", style));
 			return false;
 		}
 
@@ -128,13 +147,28 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 		try {
 			const result = await fetchInsightValue(connection, ref, seriesIndex, options);
 			streamDeck.logger.debug(`Insight ${ref.shortId} returned ${result.value}`);
-			const label = settings.label?.trim() || result.seriesLabel || result.insightName;
-			await target.setTitle(buildTitle(formatValue(result.value, settings), label));
+			const caption =
+				settings.showCaption === false
+					? undefined
+					: settings.label?.trim() || result.seriesLabel || result.insightName;
+
+			await this.#draw(
+				target,
+				renderValue(
+					{
+						value: formatValue(result.value, settings),
+						caption,
+						points: settings.showSparkline === false ? undefined : result.points,
+						delta: settings.showDelta ? changeFrom(result.points) : undefined,
+					},
+					style,
+				),
+			);
 			return true;
 		} catch (err) {
 			const reason = err instanceof PostHogError ? err.message : "Refresh failed";
 			streamDeck.logger.error(`Insight ${ref.shortId} failed: ${reason}`, err);
-			await target.setTitle(buildTitle("⚠", reason));
+			await this.#draw(target, renderError(reason, style));
 			await target.showAlert();
 			return false;
 		}
@@ -144,6 +178,28 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 /** The subset of the action API this class needs, satisfied by key and dial actions alike. */
 type Target = {
 	readonly id: string;
+	setImage(image?: string): Promise<void>;
 	setTitle(title?: string): Promise<void>;
 	showAlert(): Promise<void>;
 };
+
+/**
+ * Maps a key's appearance settings onto the renderer's style.
+ * @param settings The key's settings.
+ * @returns The style to render with.
+ */
+function keyStyle(settings: InsightSettings): KeyStyle {
+	const size = Number(settings.valueSize);
+	return {
+		theme: (settings.theme as ThemeName) || "dark",
+		customTheme: {
+			background: settings.bgColor || undefined,
+			value: settings.valueColor || undefined,
+			caption: settings.captionColor || undefined,
+			accent: settings.accentColor || undefined,
+		},
+		sparkline: settings.showSparkline !== false,
+		invertTrend: settings.invertTrend === true,
+		maxValueSize: Number.isFinite(size) && size > 0 ? size : undefined,
+	};
+}

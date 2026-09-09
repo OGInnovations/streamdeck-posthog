@@ -8,37 +8,45 @@
 			.hint {
 				color: #969696;
 				font-size: 9pt;
-				margin: 4px 0 12px 118px;
+				margin: 2px 0 12px 118px;
+			}
+			.section {
+				color: #d8d8d8;
+				font-size: 9pt;
+				font-weight: 600;
+				letter-spacing: 0.06em;
+				margin: 18px 0 8px 8px;
+				text-transform: uppercase;
+			}
+			hr {
+				border: none;
+				border-top: 1px solid #3d3d3d;
+				margin: 14px 8px 0;
+			}
+			code {
+				color: #b8b8b8;
 			}
 		</style>
 	</head>
 	<body>
 		<sdpi-item label="Insight">
-			<sdpi-textfield
-				setting="insight"
-				placeholder="Paste an insight URL"
-				required
-			></sdpi-textfield>
+			<sdpi-textfield setting="insight" placeholder="Paste an insight URL" required></sdpi-textfield>
 		</sdpi-item>
 		<div class="hint">
 			Open the insight in PostHog and paste its address, e.g.
 			<code>https://us.posthog.com/project/12345/insights/AbCdEf12</code>.
 		</div>
 
-		<sdpi-item label="Caption">
-			<sdpi-textfield setting="label" placeholder="Insight name"></sdpi-textfield>
-		</sdpi-item>
-
 		<sdpi-item label="Series">
-			<sdpi-number
-				setting="seriesIndex"
-				default="0"
-				min="0"
-				max="20"
-				step="1"
-			></sdpi-number>
+			<sdpi-select setting="seriesIndex" default="0">
+				<option value="0">First series</option>
+				<option value="1">Second series</option>
+				<option value="2">Third series</option>
+				<option value="3">Fourth series</option>
+				<option value="4">Fifth series</option>
+				<option value="5">Sixth series</option>
+			</sdpi-select>
 		</sdpi-item>
-		<div class="hint">Which series to read when the insight has more than one. First series is 0.</div>
 
 		<sdpi-item label="Refresh">
 			<sdpi-select setting="refreshSeconds" default="60">
@@ -51,12 +59,74 @@
 			</sdpi-select>
 		</sdpi-item>
 
-		<sdpi-item label="Format">
-			<sdpi-checkbox setting="compact" label="Abbreviate (12.4k)"></sdpi-checkbox>
+		<hr />
+		<div class="section">Appearance</div>
+
+		<sdpi-item label="Theme">
+			<sdpi-select setting="theme" default="dark">
+				<option value="dark">Dark</option>
+				<option value="light">Light</option>
+				<option value="posthog">PostHog orange</option>
+				<option value="midnight">Midnight</option>
+				<option value="mint">Mint</option>
+				<option value="custom">Custom colours…</option>
+			</sdpi-select>
+		</sdpi-item>
+
+		<div id="custom-colors">
+			<sdpi-item label="Background">
+				<sdpi-color setting="bgColor" default="#1C1C21"></sdpi-color>
+			</sdpi-item>
+			<sdpi-item label="Value">
+				<sdpi-color setting="valueColor" default="#FFFFFF"></sdpi-color>
+			</sdpi-item>
+			<sdpi-item label="Caption">
+				<sdpi-color setting="captionColor" default="#8E8E9A"></sdpi-color>
+			</sdpi-item>
+			<sdpi-item label="Sparkline">
+				<sdpi-color setting="accentColor" default="#F54E00"></sdpi-color>
+			</sdpi-item>
+		</div>
+
+		<sdpi-item label="Value size">
+			<sdpi-select setting="valueSize" default="0">
+				<option value="0">Fit automatically</option>
+				<option value="34">Small</option>
+				<option value="44">Medium</option>
+				<option value="58">Large</option>
+			</sdpi-select>
+		</sdpi-item>
+
+		<sdpi-item label="Caption">
+			<sdpi-textfield setting="label" placeholder="Insight name"></sdpi-textfield>
+		</sdpi-item>
+
+		<sdpi-item label="Show">
+			<sdpi-checkbox setting="showCaption" default="true" label="Caption"></sdpi-checkbox>
+			<sdpi-checkbox setting="showSparkline" default="true" label="Trend sparkline"></sdpi-checkbox>
+			<sdpi-checkbox setting="showDelta" label="Change vs previous point"></sdpi-checkbox>
+			<sdpi-checkbox setting="invertTrend" label="Falling is good"></sdpi-checkbox>
+		</sdpi-item>
+		<div class="hint">
+			The change compares the last two points of the series. The final point is usually the period
+			still in progress, so it reads as "today so far versus yesterday".
+		</div>
+
+		<hr />
+		<div class="section">Number format</div>
+
+		<sdpi-item label="Abbreviate">
+			<sdpi-checkbox setting="compact" label="Show 12.4k instead of 12,412"></sdpi-checkbox>
 		</sdpi-item>
 
 		<sdpi-item label="Decimals">
-			<sdpi-number setting="decimals" default="0" min="0" max="4" step="1"></sdpi-number>
+			<sdpi-select setting="decimals" default="0">
+				<option value="0">0</option>
+				<option value="1">1</option>
+				<option value="2">2</option>
+				<option value="3">3</option>
+				<option value="4">4</option>
+			</sdpi-select>
 		</sdpi-item>
 
 		<sdpi-item label="Prefix">
@@ -68,32 +138,49 @@
 		</sdpi-item>
 
 		<hr />
+		<div class="section">PostHog connection</div>
 
-		<details>
-			<summary style="cursor: pointer; margin: 8px 0">PostHog connection</summary>
+		<sdpi-item label="Host">
+			<sdpi-select setting="host" global default="https://us.posthog.com">
+				<option value="https://us.posthog.com">PostHog Cloud US</option>
+				<option value="https://eu.posthog.com">PostHog Cloud EU</option>
+			</sdpi-select>
+		</sdpi-item>
+		<div class="hint">
+			Self-hosted? Pasting a full insight URL above uses that URL's host automatically.
+		</div>
 
-			<sdpi-item label="Host">
-				<sdpi-select setting="host" global default="https://us.posthog.com">
-					<option value="https://us.posthog.com">PostHog Cloud US</option>
-					<option value="https://eu.posthog.com">PostHog Cloud EU</option>
-				</sdpi-select>
-			</sdpi-item>
-			<div class="hint">
-				Self-hosted? Pasting a full insight URL above uses that URL's host automatically.
-			</div>
+		<sdpi-item label="Project ID">
+			<sdpi-textfield setting="projectId" global placeholder="12345"></sdpi-textfield>
+		</sdpi-item>
 
-			<sdpi-item label="Project ID">
-				<sdpi-textfield setting="projectId" global placeholder="12345"></sdpi-textfield>
-			</sdpi-item>
+		<sdpi-item label="API key">
+			<sdpi-password setting="apiKey" global placeholder="phx_..."></sdpi-password>
+		</sdpi-item>
+		<div class="hint">
+			Create a personal API key in PostHog under Settings &rarr; Personal API keys, scoped to
+			<code>insight:read</code>. It is stored locally by Stream Deck and only ever sent to your
+			PostHog host.
+		</div>
 
-			<sdpi-item label="API key">
-				<sdpi-password setting="apiKey" global placeholder="phx_..."></sdpi-password>
-			</sdpi-item>
-			<div class="hint">
-				Create a personal API key in PostHog under Settings &rarr; Personal API keys, scoped to
-				<code>insight:read</code>. It is stored locally by Stream Deck and only ever sent to your
-				PostHog host.
-			</div>
-		</details>
+		<script>
+			// The colour pickers only apply to the Custom theme, so they are hidden
+			// otherwise. If anything here fails the rows simply stay visible, which
+			// is a longer form rather than a broken one.
+			(() => {
+				const rows = document.getElementById("custom-colors");
+				const select = document.querySelector('sdpi-select[setting="theme"]');
+				const apply = (theme) => {
+					rows.hidden = !!theme && theme !== "custom";
+				};
+
+				select?.addEventListener("change", () => apply(select.value));
+				try {
+					window.SDPIComponents.useSettings((settings) => apply(settings?.theme));
+				} catch {
+					apply("custom");
+				}
+			})();
+		</script>
 	</body>
 </html>
