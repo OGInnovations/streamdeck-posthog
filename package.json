@@ -2,6 +2,16 @@
   "name": "streamdeck-posthog",
   "version": "0.1.0",
   "description": "Show live PostHog insight values on your Elgato Stream Deck.",
+  "author": "OG Innovations",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OGInnovations/streamdeck-posthog.git"
+  },
+  "homepage": "https://github.com/OGInnovations/streamdeck-posthog#readme",
+  "bugs": {
+    "url": "https://github.com/OGInnovations/streamdeck-posthog/issues"
+  },
   "type": "module",
   "private": true,
   "scripts": {

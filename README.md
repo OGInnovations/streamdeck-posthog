@@ -151,3 +151,7 @@ The personal API key is stored by Stream Deck in the plugin's global settings on
 this machine and is sent only to the PostHog host you configure. The plugin
 makes no other network requests, and the property inspector loads no remote
 resources.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 OG Innovations.

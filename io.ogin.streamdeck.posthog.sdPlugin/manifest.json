@@ -4,6 +4,7 @@
 	"Name": "PostHog",
 	"Version": "0.1.0.0",
 	"Author": "OG Innovations",
+	"URL": "https://github.com/OGInnovations/streamdeck-posthog",
 	"Description": "Show live values from your PostHog insights on your Stream Deck keys, and refresh them on demand.",
 	"Category": "PostHog",
 	"CategoryIcon": "imgs/plugin/category-icon",
