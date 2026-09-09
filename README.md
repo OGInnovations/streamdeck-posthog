@@ -51,7 +51,21 @@ npx streamdeck link io.ogin.streamdeck.posthog.sdPlugin
 npx streamdeck restart io.ogin.streamdeck.posthog
 ```
 
-Plugin logs land in `io.ogin.streamdeck.posthog.sdPlugin/logs/`.
+Plugin logs land in `io.ogin.streamdeck.posthog.sdPlugin/logs/`. The log level
+is currently `debug` for development; lower it to `info` in `src/plugin.ts`
+before packaging for the Marketplace.
+
+### Settings and event loops
+
+Stream Deck answers `getGlobalSettings` and `getSettings` with the same
+`didReceiveGlobalSettings` / `didReceiveSettings` events that listeners
+receive, and the reply cannot be told apart from the user editing a value.
+Reading settings from inside one of those handlers therefore requests them
+again, which arrives as another event, and the plugin floods the websocket
+until the Stream Deck application stops responding. Global settings are read
+once at startup and cached in `src/global-settings.ts`; per-key settings are
+tracked from the events that carry them. Nothing outside startup calls
+`getGlobalSettings` or `getSettings`.
 
 Icons are generated rather than committed as opaque binaries — regenerate with
 `node tools/make-icons.mjs` after editing that script.

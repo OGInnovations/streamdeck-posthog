@@ -8,21 +8,31 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 
 import { buildTitle, formatValue } from "../format.js";
+import { globalSettings } from "../global-settings.js";
 import { fetchInsightValue, PostHogError, type Connection } from "../posthog/client.js";
 import { parseInsightRef } from "../posthog/insight-ref.js";
-import { refreshInterval, type GlobalSettings, type InsightSettings } from "../settings.js";
+import { refreshInterval, type InsightSettings } from "../settings.js";
+
+/** Per-key state: the key's settings and its poll timer. */
+type Instance = {
+	settings: InsightSettings;
+	timer: NodeJS.Timeout;
+};
 
 /**
  * Shows the current value of a PostHog insight on a key, polling on an
  * interval and refreshing immediately when the key is pressed.
+ *
+ * Settings are tracked from the events that carry them rather than fetched on
+ * demand: `getSettings()` is answered by a `didReceiveSettings` event, which
+ * this action also listens for, so fetching from inside a handler would loop.
  */
 @action({ UUID: "io.ogin.streamdeck.posthog.insight" })
 export class InsightValue extends SingletonAction<InsightSettings> {
-	/** One poll timer per visible key, keyed by action instance ID. */
-	readonly #timers = new Map<string, NodeJS.Timeout>();
+	readonly #instances = new Map<string, Instance>();
 
 	override onWillAppear(ev: WillAppearEvent<InsightSettings>): Promise<void> {
-		return this.#restart(ev.action.id, ev.payload.settings, ev.action);
+		return this.#restart(ev.action, ev.payload.settings);
 	}
 
 	override onWillDisappear(ev: WillDisappearEvent<InsightSettings>): void {
@@ -30,71 +40,84 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	}
 
 	override onDidReceiveSettings(ev: DidReceiveSettingsEvent<InsightSettings>): Promise<void> {
-		return this.#restart(ev.action.id, ev.payload.settings, ev.action);
+		return this.#restart(ev.action, ev.payload.settings);
 	}
 
 	override async onKeyDown(ev: KeyDownEvent<InsightSettings>): Promise<void> {
-		// A press is an explicit "give me the current number", so skip the cache.
-		const ok = await this.#render(ev.action, ev.payload.settings, { force: true });
-		if (ok) {
+		// A press means "give me the number now", so skip the cache.
+		const settings = this.#instances.get(ev.action.id)?.settings ?? ev.payload.settings;
+		if (await this.#render(ev.action, settings, { force: true })) {
 			await ev.action.showOk();
 		}
 	}
 
-	/** Refreshes every visible key, e.g. after the connection settings change. */
+	/** Redraws every visible key, e.g. after the connection settings change. */
 	async refreshAll(): Promise<void> {
 		for (const instance of this.actions) {
-			const settings = await instance.getSettings();
-			await this.#restart(instance.id, settings, instance);
+			const tracked = this.#instances.get(instance.id);
+			if (tracked) {
+				await this.#render(instance, tracked.settings, { force: true });
+			}
 		}
 	}
 
-	/** Cancels all timers; called when the plugin shuts down. */
+	/** Cancels all timers. */
 	dispose(): void {
-		for (const id of [...this.#timers.keys()]) {
+		for (const id of [...this.#instances.keys()]) {
 			this.#stop(id);
 		}
 	}
 
-	async #restart(id: string, settings: InsightSettings, target: Target): Promise<void> {
-		this.#stop(id);
-		await this.#render(target, settings);
+	async #restart(target: Target, settings: InsightSettings): Promise<void> {
+		this.#stop(target.id);
 
-		const interval = refreshInterval(settings) * 1000;
-		const timer = setInterval(() => {
-			void target.getSettings().then((current) => this.#render(target, current));
-		}, interval);
-		// The timer must not hold the plugin process open on its own.
+		const timer = setInterval(
+			() => {
+				// Rejections here would otherwise be unhandled and kill the plugin.
+				this.#render(target, settings).catch((err) => streamDeck.logger.error("Poll failed", err));
+			},
+			refreshInterval(settings) * 1000,
+		);
+		// The timer must not keep the plugin process alive on its own.
 		timer.unref?.();
-		this.#timers.set(id, timer);
+		this.#instances.set(target.id, { settings, timer });
+
+		await this.#render(target, settings);
 	}
 
 	#stop(id: string): void {
-		const timer = this.#timers.get(id);
-		if (timer) {
-			clearInterval(timer);
-			this.#timers.delete(id);
+		const instance = this.#instances.get(id);
+		if (instance) {
+			clearInterval(instance.timer);
+			this.#instances.delete(id);
 		}
 	}
 
 	/**
 	 * Fetches and draws the current value.
-	 * @returns `true` when a value was drawn, `false` when the key shows an error.
+	 * @param target The key to draw on.
+	 * @param settings The key's settings.
+	 * @param options.force Bypass the value cache.
+	 * @returns `true` when a value was drawn, `false` when the key shows a problem.
 	 */
 	async #render(target: Target, settings: InsightSettings, options: { force?: boolean } = {}): Promise<boolean> {
-		const global = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
 		const ref = parseInsightRef(settings.insight);
-
+		streamDeck.logger.debug(`Rendering ${target.id}: insight=${ref?.shortId ?? "unset"}`);
 		if (!ref) {
 			await target.setTitle(buildTitle("⚙", "Pick insight"));
 			return false;
 		}
 
+		const global = globalSettings();
 		const host = ref.host ?? global.host?.trim();
 		const projectId = ref.projectId ?? global.projectId?.trim();
 		const apiKey = global.apiKey?.trim();
 
 		if (!host || !projectId || !apiKey) {
+			// Logged without values: these settings hold the user's API key.
+			streamDeck.logger.debug(
+				`Incomplete connection: host=${!!host} project=${!!projectId} key=${!!apiKey}`,
+			);
 			await target.setTitle(buildTitle("⚙", "Connect"));
 			return false;
 		}
@@ -104,6 +127,7 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 
 		try {
 			const result = await fetchInsightValue(connection, ref, seriesIndex, options);
+			streamDeck.logger.debug(`Insight ${ref.shortId} returned ${result.value}`);
 			const label = settings.label?.trim() || result.seriesLabel || result.insightName;
 			await target.setTitle(buildTitle(formatValue(result.value, settings), label));
 			return true;
@@ -117,9 +141,9 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	}
 }
 
-/** The subset of the action API this class needs, satisfied by both key and dial actions. */
+/** The subset of the action API this class needs, satisfied by key and dial actions alike. */
 type Target = {
-	getSettings(): Promise<InsightSettings>;
+	readonly id: string;
 	setTitle(title?: string): Promise<void>;
 	showAlert(): Promise<void>;
 };

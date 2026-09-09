@@ -10,7 +10,7 @@
     "validate": "streamdeck validate io.ogin.streamdeck.posthog.sdPlugin",
     "pack": "npm run build && streamdeck pack io.ogin.streamdeck.posthog.sdPlugin --output dist --force",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --experimental-test-module-mocks --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.2"
