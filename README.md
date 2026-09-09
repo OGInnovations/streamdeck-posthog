@@ -189,10 +189,27 @@ logo nor their mascot.
 
 ## Privacy
 
-The personal API key is stored by Stream Deck in the plugin's global settings on
-this machine and is sent only to the PostHog host you configure. The plugin
+The personal API key is held in Stream Deck's global settings for this plugin,
+which Stream Deck persists in the operating system's credential store — on
+macOS, a login keychain item named `com.elgato.StreamDeck.<plugin UUID>`. No
+plaintext copy is written under Stream Deck's application support directory.
+That protects the key at rest; it does not protect it from software already
+running as you, and the plugin necessarily holds the key in memory to make its
+requests.
+
+The key is sent only to the PostHog host you configure, over HTTPS. The plugin
 makes no other network requests, and the property inspector loads no remote
-resources.
+resources — `sdpi-components.js` is vendored rather than fetched from a CDN.
+Nothing is logged that contains the key: the debug output records whether each
+connection field is set, not its value.
+
+Scope the personal API key to `insight:read` in PostHog. That is all the plugin
+uses, and it means a leaked key cannot write to your project. Keys are
+revocable from PostHog at any time.
+
+Note that Stream Deck scopes settings per plugin UUID, so the development build
+keeps its own key, and renaming a plugin's UUID leaves the old credential
+behind in the credential store.
 
 ## Licence
 
