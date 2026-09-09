@@ -22,6 +22,7 @@
     "pack": "npm run build && streamdeck pack io.ogin.streamdeck.posthog.sdPlugin --output dist --force",
     "validate": "streamdeck validate io.ogin.streamdeck.posthog.sdPlugin",
     "release": "node tools/release.mjs",
+    "check:version": "node tools/check-version.mjs",
     "dev": "SD_VARIANT=dev rollup -c -w --watch.onEnd=\"streamdeck restart io.ogin.streamdeck.posthog.dev\"",
     "dev:build": "SD_VARIANT=dev rollup -c",
     "dev:link": "npm run dev:build && streamdeck link io.ogin.streamdeck.posthog.dev.sdPlugin && streamdeck restart io.ogin.streamdeck.posthog.dev",

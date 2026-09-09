@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+# Nothing here writes to the repository.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Both versions report, so a failure on one is not hidden by the other.
+      fail-fast: false
+      matrix:
+        # The test suite mocks a module, which needs
+        # --experimental-test-module-mocks — added in Node 22.3, so 20 cannot
+        # run the tests even though it is what the plugin runs on. The `runtime`
+        # job below covers Node 20.
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # Also fetches the manifest URL, so a broken support link is caught here.
+      - run: npm run validate
+
+  runtime:
+    name: Builds and parses on the runtime Node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Stream Deck runs the plugin on the Node declared in the manifest, which
+      # is older than the Node the tests need. Building and parsing the bundle
+      # here catches syntax the runtime would reject at load.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle parses
+        run: node --check "$(node -p 'require("./package.json").streamDeck.uuid').sdPlugin/bin/plugin.js"
+
+  package:
+    name: Package
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check, runtime]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # A tag that disagrees with the declared version means the package is not
+      # what the tag says, which would otherwise surface only at upload.
+      - name: Tag agrees with the declared version
+        run: node tools/check-version.mjs "${GITHUB_REF_NAME#v}"
+      - run: npm run pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streamdeck-plugin-${{ github.ref_name }}
+          path: dist/*.streamDeckPlugin
+          if-no-files-found: error

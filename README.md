@@ -186,6 +186,36 @@ transforms, and it only renders SVG at full size from 512 pixels upwards, so
 artwork is authored at absolute coordinates and rendered large before being
 reduced or cropped.
 
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to
+`main`, every pull request, and every `v*` tag:
+
+| Job | What it covers |
+| --- | --- |
+| **Check** | Typecheck, tests, build and `streamdeck validate`, on Node 22 and 24 |
+| **Runtime** | Builds on Node 20 and checks the bundle parses there |
+| **Package** | On a tag only: verifies the tag agrees with the declared version, then packs and uploads the `.streamDeckPlugin` as an artifact |
+
+Two things worth knowing about the Node versions. The test suite mocks a module,
+which needs `--experimental-test-module-mocks`; that flag arrived in Node 22.3,
+so Node 20 cannot run the tests even though it is the version Stream Deck runs
+the plugin on. The Runtime job exists to cover that gap — it builds on Node 20
+and parses the bundle, which catches syntax the runtime would reject at load.
+
+The Package job runs `tools/check-version.mjs`, which asserts the tag matches
+both `package.json` and the manifest's four-part `Version`. Without it, tagging
+`v1.1.0` while the manifest still said `1.0.0.0` would only surface when the
+Marketplace rejected the upload. Run it by hand with:
+
+```sh
+npm run check:version -- 1.1.0
+```
+
+CI runs on Linux only. The plugin is pure Node, so platform coverage adds
+little; the artwork tooling is macOS-only but its output is committed and is
+never regenerated in CI.
+
 ## Cutting a release
 
 Every submission needs its version bumped in two places, its listing images
