@@ -1,6 +1,8 @@
-# PostHog for Stream Deck
+# Live Metrics for PostHog
 
 Show live values from your PostHog insights on Elgato Stream Deck keys.
+
+Not affiliated with or endorsed by PostHog.
 
 The **Insight Value** action polls a saved PostHog insight and draws its current
 number on the key, with an optional caption. Pressing the key refreshes it
@@ -146,28 +148,42 @@ once at startup and cached in `src/global-settings.ts`; per-key settings are
 tracked from the events that carry them. Nothing outside startup calls
 `getGlobalSettings` or `getSettings`.
 
-Icons are generated rather than committed as opaque binaries — regenerate with
-`node tools/make-icons.mjs` after editing that script.
+Artwork is generated rather than hand-drawn in a binary editor:
+
+```sh
+node tools/make-artwork.mjs             # plugin, category, action and key artwork
+node --import tsx tools/make-listing.ts # Marketplace thumbnail and gallery images
+```
+
+Both need macOS: the PNGs are rasterised with `qlmanage`. The generated files
+are committed, so building the plugin does not need a Mac. Two quirks of that
+rasteriser are worth knowing if you edit the tools — it ignores `scale()`
+transforms, and it only renders SVG at full size from 512 pixels upwards, so
+artwork is authored at absolute coordinates and rendered large before being
+reduced or cropped.
 
 ## Shipping to the Elgato Marketplace
 
 `npm run pack` produces `dist/io.ogin.streamdeck.posthog.streamDeckPlugin`,
-which is what the Marketplace accepts. Before submitting:
+which is what the Marketplace accepts. Listing copy and the required images are
+in [`docs/marketplace/`](docs/marketplace/listing.md), including a
+pre-submission checklist.
 
-- `npm run validate` must pass with no errors or warnings.
-- Register for a Maker account at <https://marketplace.elgato.com/maker> and
-  create the plugin listing under the UUID `io.ogin.streamdeck.posthog`. **The
-  UUID is permanent once published**, so it must stay on a domain you control.
-- Replace the generated placeholder artwork in `imgs/` with real artwork. Note
-  that these images are only the action list and Marketplace listing — the keys
-  themselves are drawn at runtime. The
-  Marketplace listing additionally wants screenshots and a plugin description
-  beyond what `manifest.json` carries.
-- Add the `URL` field back to `manifest.json` pointing at the public repository
-  or a support page. It was left out here because validation flags a URL that
-  does not resolve.
-- Bump `Version` in `manifest.json` (four-part, e.g. `0.2.0.0`) for each
-  submission; the Marketplace rejects a re-upload of an existing version.
+Artwork follows Elgato's guidelines: the plugin icon is PNG at 256 × 256 and
+512 × 512, category and action icons are SVG, and the action icon is
+monochrome white on a transparent background. Listing images are 1920 × 960.
+
+Two things to know before submitting:
+
+- The manifest `URL` must resolve. While the repository is private,
+  `npm run validate` warns that it returns 404.
+- `Version` in `manifest.json` is four-part (`1.0.0.0`) and must increase for
+  each submission; the Marketplace rejects a re-upload of an existing version.
+  Keep it in step with `version` in `package.json`.
+
+The plugin's name follows PostHog's brand policy, which permits the "X for PostHog" form but prohibits using their name as a project's main branding, and
+prohibits the hedgehog mascot outright. The artwork here uses neither their
+logo nor their mascot.
 
 ## Privacy
 

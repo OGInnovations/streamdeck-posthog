@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-posthog",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Show live PostHog insight values on your Elgato Stream Deck.",
   "author": "OG Innovations",
   "license": "MIT",

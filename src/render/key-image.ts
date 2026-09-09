@@ -304,26 +304,38 @@ function centeredLines(message: string, color: string, firstBaseline: number, si
 }
 
 /**
- * Draws the bar-chart mark used on the setup state.
+ * Draws the plugin's mark — a rising line with a point at its head — centred
+ * on a position. Matches the plugin's icon, so an unconfigured key reads as
+ * belonging to it.
  * @param cx Horizontal centre.
  * @param cy Vertical centre.
- * @param size Overall height of the mark.
- * @param color Fill colour.
- * @param opacity Fill opacity.
+ * @param size Height of the mark's grid.
+ * @param color Stroke and point colour.
+ * @param opacity Opacity of the whole mark.
  * @returns SVG markup.
  */
 function logo(cx: number, cy: number, size: number, color: string, opacity: number): string {
-	const barWidth = size * 0.26;
-	const gap = size * 0.13;
-	const heights = [size * 0.5, size * 0.75, size];
-	const totalWidth = barWidth * 3 + gap * 2;
-	return heights
-		.map((height, index) => {
-			const x = cx - totalWidth / 2 + index * (barWidth + gap);
-			return (
-				`<rect x="${x.toFixed(1)}" y="${(cy + size / 2 - height).toFixed(1)}" width="${barWidth.toFixed(1)}"` +
-				` height="${height.toFixed(1)}" rx="${(barWidth / 3).toFixed(1)}" fill="${color}" opacity="${opacity}"/>`
-			);
-		})
-		.join("");
+	const grid = [
+		[3.6, 16.2],
+		[8.8, 11.0],
+		[12.7, 13.8],
+		[18.6, 7.0],
+	] as const;
+	const k = size / 12;
+	// Centre the mark's own bounding box on the given position.
+	const offsetX = cx - 11.1 * k;
+	const offsetY = cy - 11.6 * k;
+	const at = ([x, y]: readonly [number, number]) =>
+		`${(x * k + offsetX).toFixed(1)} ${(y * k + offsetY).toFixed(1)}`;
+	const head = grid[grid.length - 1]!;
+
+	return (
+		`<g opacity="${opacity}">` +
+		`<path d="M${grid.map(at).join(" L")}" fill="none" stroke="${color}" stroke-width="${(2.2 * k).toFixed(1)}"` +
+		` stroke-linecap="round" stroke-linejoin="round"/>` +
+		`<circle cx="${(head[0] * k + offsetX).toFixed(1)}" cy="${(head[1] * k + offsetY).toFixed(1)}"` +
+		` r="${(1.9 * k).toFixed(1)}" fill="${color}"/>` +
+		`</g>`
+	);
 }
+
