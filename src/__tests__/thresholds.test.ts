@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { alertLevel } from "../thresholds.js";
+import { alertLevel, crossedIntoAlert } from "../thresholds.js";
 
 describe("alertLevel", () => {
 	it("reports nothing when alerts are off", () => {
@@ -64,5 +64,37 @@ describe("alertLevel", () => {
 	it("handles negative thresholds", () => {
 		assert.equal(alertLevel(-5, { alertDirection: "below", warnAt: -1, criticalAt: -10 }), "warn");
 		assert.equal(alertLevel(-20, { alertDirection: "below", warnAt: -1, criticalAt: -10 }), "critical");
+	});
+});
+
+describe("crossedIntoAlert", () => {
+	it("alerts on first entering a level", () => {
+		assert.equal(crossedIntoAlert(undefined, "warn"), true);
+		assert.equal(crossedIntoAlert(undefined, "critical"), true);
+	});
+
+	it("alerts when warning worsens to critical", () => {
+		assert.equal(crossedIntoAlert("warn", "critical"), true);
+	});
+
+	it("stays silent while the level is unchanged", () => {
+		// Otherwise the deck would nag on every poll for as long as the value
+		// stayed out of bounds.
+		assert.equal(crossedIntoAlert("warn", "warn"), false);
+		assert.equal(crossedIntoAlert("critical", "critical"), false);
+	});
+
+	it("stays silent on recovery", () => {
+		assert.equal(crossedIntoAlert("critical", "warn"), false);
+		assert.equal(crossedIntoAlert("warn", undefined), false);
+		assert.equal(crossedIntoAlert("critical", undefined), false);
+		assert.equal(crossedIntoAlert(undefined, undefined), false);
+	});
+
+	it("alerts again after recovering and crossing back", () => {
+		// The sequence a key actually goes through: breach, recover, breach.
+		assert.equal(crossedIntoAlert(undefined, "warn"), true);
+		assert.equal(crossedIntoAlert("warn", undefined), false);
+		assert.equal(crossedIntoAlert(undefined, "warn"), true);
 	});
 });

@@ -47,3 +47,24 @@ export function alertLevel(value: number, settings: InsightSettings): AlertLevel
 	}
 	return crossed(warn) ? "warn" : undefined;
 }
+
+/**
+ * Whether a change in level warrants raising Stream Deck's alert on the key.
+ *
+ * Alerting on every poll would nag for as long as the value stayed out of
+ * bounds, so the deck is alerted only when things get worse: on first entering
+ * warning or critical, and on worsening from one to the other. Recovering, or
+ * staying at the same level, is silent.
+ * @param previous The level last drawn, or `undefined` if the value was in bounds.
+ * @param next The level now.
+ * @returns `true` when the deck should alert.
+ */
+export function crossedIntoAlert(previous: AlertLevel | undefined, next: AlertLevel | undefined): boolean {
+	if (next === undefined) {
+		return false;
+	}
+	if (previous === undefined) {
+		return true;
+	}
+	return next === "critical" && previous !== "critical";
+}

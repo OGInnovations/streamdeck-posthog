@@ -17,7 +17,7 @@ import { parseInsightRef } from "../posthog/insight-ref.js";
 import { renderError, renderSetup, renderValue, type KeyStyle } from "../render/key-image.js";
 import type { ThemeName } from "../render/theme.js";
 import { refreshInterval, type InsightSettings } from "../settings.js";
-import { alertLevel, type AlertLevel } from "../thresholds.js";
+import { alertLevel, crossedIntoAlert, type AlertLevel } from "../thresholds.js";
 
 /** Per-key state: the key's settings, its poll timer and its last alert level. */
 type Instance = {
@@ -80,6 +80,10 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	}
 
 	async #restart(target: Target, settings: InsightSettings): Promise<void> {
+		// Read the remembered level before stopping, which discards the instance.
+		// Losing it would make the deck alert again on every settings edit while
+		// a value was out of bounds.
+		const alert = this.#instances.get(target.id)?.alert;
 		this.#stop(target.id);
 
 		const timer = setInterval(
@@ -91,7 +95,7 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 		);
 		// The timer must not keep the plugin process alive on its own.
 		timer.unref?.();
-		this.#instances.set(target.id, { settings, timer, alert: this.#instances.get(target.id)?.alert });
+		this.#instances.set(target.id, { settings, timer, alert });
 
 		await this.#render(target, settings);
 	}
@@ -181,15 +185,12 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 				),
 			);
 
-			// Alerting on every poll would nag for as long as the value stays out
-			// of bounds, so the deck is only alerted when the level worsens.
 			const instance = this.#instances.get(target.id);
-			const worsened = alert === "critical" && instance?.alert !== "critical";
-			const entered = alert === "warn" && instance?.alert === undefined;
+			const notify = crossedIntoAlert(instance?.alert, alert);
 			if (instance) {
 				instance.alert = alert;
 			}
-			if (settings.alertOnCross && (worsened || entered)) {
+			if (settings.alertOnCross && notify) {
 				await target.showAlert();
 			}
 			return true;
