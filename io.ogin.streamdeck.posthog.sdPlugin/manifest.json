@@ -1,0 +1,49 @@
+{
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"UUID": "io.ogin.streamdeck.posthog",
+	"Name": "PostHog",
+	"Version": "0.1.0.0",
+	"Author": "OG Innovations",
+	"Description": "Show live values from your PostHog insights on your Stream Deck keys, and refresh them on demand.",
+	"Category": "PostHog",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"Icon": "imgs/plugin/marketplace",
+	"CodePath": "bin/plugin.js",
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "6.5"
+	},
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "enabled"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Actions": [
+		{
+			"UUID": "io.ogin.streamdeck.posthog.insight",
+			"Name": "Insight Value",
+			"Tooltip": "Display the current value of a PostHog insight, refreshed automatically.",
+			"Icon": "imgs/actions/insight/icon",
+			"PropertyInspectorPath": "ui/insight.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/insight/key",
+					"TitleAlignment": "middle",
+					"FontSize": 14
+				}
+			]
+		}
+	]
+}

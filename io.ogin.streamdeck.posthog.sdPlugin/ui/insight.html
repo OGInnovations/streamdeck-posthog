@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+	<head lang="en">
+		<meta charset="utf-8" />
+		<!-- Vendored rather than loaded from the CDN so the inspector works offline. -->
+		<script src="sdpi-components.js"></script>
+		<style>
+			.hint {
+				color: #969696;
+				font-size: 9pt;
+				margin: 4px 0 12px 118px;
+			}
+		</style>
+	</head>
+	<body>
+		<sdpi-item label="Insight">
+			<sdpi-textfield
+				setting="insight"
+				placeholder="Paste an insight URL"
+				required
+			></sdpi-textfield>
+		</sdpi-item>
+		<div class="hint">
+			Open the insight in PostHog and paste its address, e.g.
+			<code>https://us.posthog.com/project/12345/insights/AbCdEf12</code>.
+		</div>
+
+		<sdpi-item label="Caption">
+			<sdpi-textfield setting="label" placeholder="Insight name"></sdpi-textfield>
+		</sdpi-item>
+
+		<sdpi-item label="Series">
+			<sdpi-number
+				setting="seriesIndex"
+				default="0"
+				min="0"
+				max="20"
+				step="1"
+			></sdpi-number>
+		</sdpi-item>
+		<div class="hint">Which series to read when the insight has more than one. First series is 0.</div>
+
+		<sdpi-item label="Refresh">
+			<sdpi-select setting="refreshSeconds" default="60">
+				<option value="15">Every 15 seconds</option>
+				<option value="30">Every 30 seconds</option>
+				<option value="60">Every minute</option>
+				<option value="300">Every 5 minutes</option>
+				<option value="900">Every 15 minutes</option>
+				<option value="3600">Every hour</option>
+			</sdpi-select>
+		</sdpi-item>
+
+		<sdpi-item label="Format">
+			<sdpi-checkbox setting="compact" label="Abbreviate (12.4k)"></sdpi-checkbox>
+		</sdpi-item>
+
+		<sdpi-item label="Decimals">
+			<sdpi-number setting="decimals" default="0" min="0" max="4" step="1"></sdpi-number>
+		</sdpi-item>
+
+		<sdpi-item label="Prefix">
+			<sdpi-textfield setting="prefix" placeholder="e.g. $" maxlength="4"></sdpi-textfield>
+		</sdpi-item>
+
+		<sdpi-item label="Suffix">
+			<sdpi-textfield setting="suffix" placeholder="e.g. %" maxlength="4"></sdpi-textfield>
+		</sdpi-item>
+
+		<hr />
+
+		<details>
+			<summary style="cursor: pointer; margin: 8px 0">PostHog connection</summary>
+
+			<sdpi-item label="Host">
+				<sdpi-select setting="host" global default="https://us.posthog.com">
+					<option value="https://us.posthog.com">PostHog Cloud US</option>
+					<option value="https://eu.posthog.com">PostHog Cloud EU</option>
+				</sdpi-select>
+			</sdpi-item>
+			<div class="hint">
+				Self-hosted? Pasting a full insight URL above uses that URL's host automatically.
+			</div>
+
+			<sdpi-item label="Project ID">
+				<sdpi-textfield setting="projectId" global placeholder="12345"></sdpi-textfield>
+			</sdpi-item>
+
+			<sdpi-item label="API key">
+				<sdpi-password setting="apiKey" global placeholder="phx_..."></sdpi-password>
+			</sdpi-item>
+			<div class="hint">
+				Create a personal API key in PostHog under Settings &rarr; Personal API keys, scoped to
+				<code>insight:read</code>. It is stored locally by Stream Deck and only ever sent to your
+				PostHog host.
+			</div>
+		</details>
+	</body>
+</html>

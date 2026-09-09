@@ -1,0 +1,7 @@
+node_modules/
+dist/
+io.ogin.streamdeck.posthog.sdPlugin/bin/
+*.streamDeckPlugin
+.DS_Store
+.idea/
+io.ogin.streamdeck.posthog.sdPlugin/logs/
