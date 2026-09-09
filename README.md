@@ -86,7 +86,7 @@ reason — as it does for an invalid key, a missing insight or a rate limit.
 
 ## Development
 
-Requires Node 20+ and the Stream Deck app 6.5 or later.
+Requires Node 20+ and the Stream Deck app 6.9 or later.
 
 The plugin builds in two variants. Stream Deck identifies a plugin by its UUID
 and requires the `.sdPlugin` directory to be named after it, so a locally linked
@@ -175,8 +175,10 @@ monochrome white on a transparent background. Listing images are 1920 × 960.
 
 Two things to know before submitting:
 
-- The manifest `URL` must resolve. While the repository is private,
-  `npm run validate` warns that it returns 404.
+- The Maker console requires `SDKVersion` 3 and a `Software.MinimumVersion` of
+  6.9 or later; SDK 3 is only valid from 6.9 up. Anything lower is rejected at
+  upload, and also disables Elgato's DRM protection.
+- The manifest `URL` must resolve, or `npm run validate` warns that it 404s.
 - `Version` in `manifest.json` is four-part (`1.0.0.0`) and must increase for
   each submission; the Marketplace rejects a re-upload of an existing version.
   Keep it in step with `version` in `package.json`.
