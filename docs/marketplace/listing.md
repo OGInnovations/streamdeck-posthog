@@ -36,7 +36,9 @@ the background, value, caption and sparkline. Metrics where falling is the good
 direction, like error rate, can flip the trend colours.
 
 Works with PostHog Cloud US, Cloud EU and self-hosted deployments. Your personal
-API key is stored locally by Stream Deck and sent only to your own PostHog host.
+API key is kept in your operating system's credential store and sent only to the
+PostHog host you configure. Scope it to insight:read and the plugin can do
+nothing but read the numbers it shows.
 
 Not affiliated with or endorsed by PostHog.
 
