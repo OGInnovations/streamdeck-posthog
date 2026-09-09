@@ -26,8 +26,9 @@ if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) {
 	process.exit(1);
 }
 
+/** Runs a command, returning its output — empty when stdio is not captured. */
 const run = (command, args, options = {}) =>
-	execFileSync(command, args, { cwd: ROOT, encoding: "utf8", ...options }).trim();
+	execFileSync(command, args, { cwd: ROOT, encoding: "utf8", ...options })?.trim() ?? "";
 
 /** Refuses to build a release out of a dirty tree, which would be unreproducible. */
 const dirty = run("git", ["status", "--porcelain"]);
