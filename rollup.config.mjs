@@ -58,7 +58,11 @@ export default {
 		devVariant(),
 		pluginIdentity(),
 		// outDir must match the variant being built, overriding tsconfig's default.
-		typescript({ outDir: `${sdPlugin}/bin`, mapRoot: isWatching ? "./" : undefined }),
+		typescript({
+			outDir: `${sdPlugin}/bin`,
+			sourceMap: isWatching,
+			mapRoot: isWatching ? "./" : undefined,
+		}),
 		nodeResolve({ browser: false, exportConditions: ["node"], preferBuiltins: true }),
 		commonjs(),
 	],
