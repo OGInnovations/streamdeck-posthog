@@ -1,3 +1,5 @@
+import { IS_DEV, PLUGIN_UUID } from "virtual:identity";
+
 import streamDeck, {
 	action,
 	SingletonAction,
@@ -30,7 +32,7 @@ type Instance = {
  * demand: `getSettings()` is answered by a `didReceiveSettings` event, which
  * this action also listens for, so fetching from inside a handler would loop.
  */
-@action({ UUID: "io.ogin.streamdeck.posthog.insight" })
+@action({ UUID: `${PLUGIN_UUID}.insight` })
 export class InsightValue extends SingletonAction<InsightSettings> {
 	readonly #instances = new Map<string, Instance>();
 
@@ -209,6 +211,9 @@ function keyStyle(settings: InsightSettings): KeyStyle {
 		},
 		sparkline: settings.showSparkline !== false,
 		invertTrend: settings.invertTrend === true,
+		// Marks keys belonging to the development build, which is installed
+		// alongside the release one and otherwise looks identical.
+		devBadge: IS_DEV,
 		maxValueSize: Number.isFinite(size) && size > 0 ? size : undefined,
 	};
 }

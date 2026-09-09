@@ -14,13 +14,20 @@
   },
   "type": "module",
   "private": true,
+  "streamDeck": {
+    "uuid": "io.ogin.streamdeck.posthog"
+  },
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart io.ogin.streamdeck.posthog\"",
-    "validate": "streamdeck validate io.ogin.streamdeck.posthog.sdPlugin",
     "pack": "npm run build && streamdeck pack io.ogin.streamdeck.posthog.sdPlugin --output dist --force",
-    "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --experimental-test-module-mocks --test \"src/**/*.test.ts\""
+    "validate": "streamdeck validate io.ogin.streamdeck.posthog.sdPlugin",
+    "dev": "SD_VARIANT=dev rollup -c -w --watch.onEnd=\"streamdeck restart io.ogin.streamdeck.posthog.dev\"",
+    "dev:build": "SD_VARIANT=dev rollup -c",
+    "dev:link": "npm run dev:build && streamdeck link io.ogin.streamdeck.posthog.dev.sdPlugin && streamdeck restart io.ogin.streamdeck.posthog.dev",
+    "dev:unlink": "streamdeck unlink io.ogin.streamdeck.posthog.dev",
+    "dev:validate": "npm run dev:build && streamdeck validate io.ogin.streamdeck.posthog.dev.sdPlugin",
+    "test": "node --import tsx --experimental-test-module-mocks --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.2"

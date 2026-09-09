@@ -86,25 +86,49 @@ reason — as it does for an invalid key, a missing insight or a rate limit.
 
 Requires Node 20+ and the Stream Deck app 6.5 or later.
 
+The plugin builds in two variants. Stream Deck identifies a plugin by its UUID
+and requires the `.sdPlugin` directory to be named after it, so a locally linked
+build and a Marketplace install cannot share one identifier — installing either
+would displace the other. The development variant therefore carries its own:
+
+| | Release | Development |
+| --- | --- | --- |
+| UUID | `io.ogin.streamdeck.posthog` | `io.ogin.streamdeck.posthog.dev` |
+| Shown as | PostHog | PostHog (Dev) |
+| Directory | committed | generated, not committed |
+| Keys marked | no | thin purple stripe along the top edge |
+
+Both can be installed at once, so you can develop against the local build while
+running the released one from the Marketplace.
+
 ```sh
 npm install
-npm run build      # bundle to io.ogin.streamdeck.posthog.sdPlugin/bin
-npm run watch      # rebuild and restart the plugin on change
-npm test           # unit tests (node:test)
+npm run dev:link    # build the dev variant and link it to Stream Deck
+npm run dev         # rebuild and restart it on every change
+npm test
 npm run typecheck
-npm run validate   # Elgato's marketplace validation rules
+npm run validate    # Elgato's marketplace rules, release variant
+npm run dev:validate
+npm run build       # release bundle
+npm run pack        # release .streamDeckPlugin in dist/
+npm run dev:unlink  # remove the dev plugin from Stream Deck
 ```
 
-To run it against your own Stream Deck for the first time:
+The first time on a machine, enable developer mode with `npx streamdeck dev`.
 
-```sh
-npx streamdeck dev                                    # enable developer mode
-npx streamdeck link io.ogin.streamdeck.posthog.sdPlugin
-npx streamdeck restart io.ogin.streamdeck.posthog
-```
+The development variant is generated from the release manifest by
+`tools/make-variant.mjs`, so there is only ever one manifest to edit; its UUIDs,
+names and category are derived. The UUID reaches the bundle through a virtual
+`virtual:identity` module supplied by `rollup.config.mjs`, so the action always
+registers the identifier matching the manifest it was built for.
 
-Plugin logs land in `io.ogin.streamdeck.posthog.sdPlugin/logs/`. Raise the
-level to `debug` in `src/plugin.ts` to trace what each key renders and why.
+Because Stream Deck scopes settings to the plugin UUID, the two variants keep
+**separate** API keys and key configurations. That is usually what you want —
+point the development build at a test project — but it does mean entering the
+connection details in each.
+
+Plugin logs land in `<variant>.sdPlugin/logs/`. Raise the level to `debug` in
+`src/plugin.ts` to trace what each key renders and why.
 
 Key designs can be previewed without a Stream Deck: render the SVG for a set of
 states and rasterise it with `qlmanage -t -s 288 -o . key.svg`. That is how the

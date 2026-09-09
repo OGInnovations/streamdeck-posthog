@@ -18,6 +18,13 @@ const PADDING = 10;
 const CONTENT_WIDTH = SIZE - PADDING * 2;
 const FONTS = "-apple-system, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
+/**
+ * Colour of the stripe marking a development build. Deliberately outside every
+ * theme's palette, so a key from the locally linked plugin is obvious next to
+ * the same key from the Marketplace install.
+ */
+const DEV_STRIPE = "#A78BFA";
+
 /** What to draw on the key. */
 export type KeyContent = {
 	/** The formatted value, e.g. `18.4k`. */
@@ -39,6 +46,8 @@ export type KeyStyle = {
 	maxValueSize?: number;
 	/** Treat a falling value as the good direction, e.g. for error rates. */
 	invertTrend?: boolean;
+	/** Mark the key as belonging to the development build. */
+	devBadge?: boolean;
 };
 
 /**
@@ -94,7 +103,7 @@ export function renderValue(content: KeyContent, style: KeyStyle = {}): string {
 			` font-size="${size}" font-weight="700" text-anchor="middle">${escapeXml(content.value)}</text>`,
 	);
 
-	return wrap(layers);
+	return wrap(layers, style.devBadge === true);
 }
 
 /**
@@ -105,13 +114,16 @@ export function renderValue(content: KeyContent, style: KeyStyle = {}): string {
  */
 export function renderSetup(message: string, style: KeyStyle = {}): string {
 	const theme = resolveTheme(style.theme, style.customTheme);
-	return wrap([
-		background(theme),
-		`<rect x="6" y="6" width="${SIZE - 12}" height="${SIZE - 12}" rx="12" fill="none"` +
-			` stroke="${theme.caption}" stroke-width="2" stroke-dasharray="7 6" opacity="0.55"/>`,
-		logo(SIZE / 2, 48, 22, theme.accent, 0.9),
-		...centeredLines(message, theme.caption, 88, 18),
-	]);
+	return wrap(
+		[
+			background(theme),
+			`<rect x="6" y="6" width="${SIZE - 12}" height="${SIZE - 12}" rx="12" fill="none"` +
+				` stroke="${theme.caption}" stroke-width="2" stroke-dasharray="7 6" opacity="0.55"/>`,
+			logo(SIZE / 2, 48, 22, theme.accent, 0.9),
+			...centeredLines(message, theme.caption, 88, 18),
+		],
+		style.devBadge === true,
+	);
 }
 
 /**
@@ -122,21 +134,33 @@ export function renderSetup(message: string, style: KeyStyle = {}): string {
  */
 export function renderError(message: string, style: KeyStyle = {}): string {
 	const theme = resolveTheme(style.theme, style.customTheme);
-	return wrap([
-		background(theme),
-		// Warning triangle, drawn as a path so no glyph or emoji font is needed.
-		`<path d="M72 26 L96 68 L48 68 Z" fill="none" stroke="${WARNING_COLOR}" stroke-width="6"` +
-			` stroke-linejoin="round"/>`,
-		`<rect x="69.5" y="42" width="5" height="14" rx="2.5" fill="${WARNING_COLOR}"/>`,
-		`<circle cx="72" cy="62" r="3" fill="${WARNING_COLOR}"/>`,
-		...centeredLines(message, theme.value, 90, 17),
-	]);
+	return wrap(
+		[
+			background(theme),
+			// Warning triangle, drawn as a path so no glyph or emoji font is needed.
+			`<path d="M72 26 L96 68 L48 68 Z" fill="none" stroke="${WARNING_COLOR}" stroke-width="6"` +
+				` stroke-linejoin="round"/>`,
+			`<rect x="69.5" y="42" width="5" height="14" rx="2.5" fill="${WARNING_COLOR}"/>`,
+			`<circle cx="72" cy="62" r="3" fill="${WARNING_COLOR}"/>`,
+			...centeredLines(message, theme.value, 90, 17),
+		],
+		style.devBadge === true,
+	);
 }
 
-function wrap(layers: string[]): string {
+/**
+ * Wraps the drawn layers into an SVG data URI.
+ * @param layers Markup for each layer, back to front.
+ * @param devBadge Whether to mark the key as a development build.
+ * @returns An SVG data URI.
+ */
+function wrap(layers: string[], devBadge = false): string {
+	const marked = devBadge
+		? [...layers, `<rect x="0" y="0" width="${SIZE}" height="4" fill="${DEV_STRIPE}"/>`]
+		: layers;
 	const svg =
 		`<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">` +
-		layers.join("") +
+		marked.join("") +
 		"</svg>";
 	// Stream Deck accepts SVG as a data URI; base64 avoids escaping issues with
 	// the `#` in colour values.

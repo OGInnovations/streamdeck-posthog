@@ -104,3 +104,24 @@ describe("text measurement", () => {
 		assert.ok(result.length < "Total pageviews all time".length);
 	});
 });
+
+describe("development build marker", () => {
+	// The development plugin runs alongside the Marketplace install under its
+	// own UUID, and would otherwise be indistinguishable on the deck.
+	const STRIPE = /#A78BFA/;
+
+	it("marks a value key", () => {
+		assert.match(svgOf(renderValue({ value: "1" }, { devBadge: true })), STRIPE);
+	});
+
+	it("marks the setup and error states too", () => {
+		assert.match(svgOf(renderSetup("Connect", { devBadge: true })), STRIPE);
+		assert.match(svgOf(renderError("Nope", { devBadge: true })), STRIPE);
+	});
+
+	it("leaves the release build unmarked", () => {
+		assert.doesNotMatch(svgOf(renderValue({ value: "1" })), STRIPE);
+		assert.doesNotMatch(svgOf(renderSetup("Connect")), STRIPE);
+		assert.doesNotMatch(svgOf(renderError("Nope")), STRIPE);
+	});
+});
