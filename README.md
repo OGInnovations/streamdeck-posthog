@@ -186,6 +186,34 @@ transforms, and it only renders SVG at full size from 512 pixels upwards, so
 artwork is authored at absolute coordinates and rendered large before being
 reduced or cropped.
 
+## Cutting a release
+
+Every submission needs its version bumped in two places, its listing images
+regenerated so they do not advertise the previous release's features, and notes
+covering what changed. One command does all of it:
+
+```sh
+npm run release -- 1.1.0
+```
+
+That bumps `package.json` and the manifest's four-part `Version`, regenerates
+the artwork and the 1920 × 960 listing images, drafts
+`docs/marketplace/releases/1.1.0.md` from the commits since the previous tag,
+validates, and packages to `dist/`. It refuses to run on a dirty tree, and
+refuses a version the project already declares. Then edit the drafted notes into
+something a user would want to read, and:
+
+```sh
+git add -A && git commit -m "Release 1.1.0"
+git tag -a v1.1.0 -m "1.1.0"
+git push --follow-tags
+```
+
+**Tag every release.** The notes for a release are drafted from the commits
+since the previous tag, so an untagged release leaves the next one with no idea
+where it started. Tags are annotated and named `v<major>.<minor>.<patch>`;
+`v1.0.0` is the first Marketplace release.
+
 ## Shipping to the Elgato Marketplace
 
 `npm run pack` produces `dist/io.ogin.streamdeck.posthog.streamDeckPlugin`,

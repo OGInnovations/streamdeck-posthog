@@ -1,7 +1,11 @@
 # Marketplace listing
 
-Copy and assets for the Elgato Maker Console submission. Generated assets live
-alongside this file; regenerate them with `node --import tsx tools/make-listing.ts`.
+Copy and assets for the Elgato Maker Console submission.
+
+The name, summary, description and tags below are stable across releases. What
+changes per release is the release notes and, when the feature set changes, the
+gallery images. `npm run release -- <version>` regenerates the images, drafts
+the notes, and packages the plugin — see "Cutting a release" in the README.
 
 ## Product name
 
@@ -42,16 +46,11 @@ nothing but read the numbers it shows.
 
 Not affiliated with or endorsed by PostHog.
 
-## Release notes — 1.0.0
+## Release notes
 
-First release.
-
-- Insight Value action: shows a PostHog insight's current value on a key
-- Automatic refresh from 15 seconds to hourly, plus refresh on press
-- Trend sparkline drawn from the insight's own series
-- Optional change indicator, with an inverted mode for metrics where falling is good
-- Five themes plus custom colours, and per-element visibility
-- PostHog Cloud US, Cloud EU and self-hosted support
+Per release, in [`releases/`](releases/). Paste the current version's file into
+the Maker Console's release notes field. `npm run release -- <version>` drafts
+the next one from the commits since the previous tag.
 
 ## Tags
 
