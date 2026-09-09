@@ -49,6 +49,29 @@ series. The final point of a PostHog trend is usually the period still in
 progress, so it reads as "today so far versus yesterday" rather than a
 like-for-like comparison — which is why it is off by default.
 
+## How often it asks PostHog, and for what
+
+PostHog can either return an insight's cached result or recompute it. Recomputing
+is expensive and counts against the project's query capacity, so:
+
+- **Polling** serves whatever PostHog already has cached. A deck of keys
+  refreshing every minute costs almost nothing.
+- **Pressing a key** asks PostHog to recompute, which is the point of pressing it.
+- **Starting the plugin or changing the connection settings** refreshes every
+  visible key from PostHog's cache. It deliberately does not recompute:
+  otherwise every restart would storm the query engine once per key.
+- An insight nobody has opened yet has no cached result, so the plugin asks for
+  one recomputation rather than showing an error indefinitely.
+
+Values are also cached in the plugin for ten seconds and shared between keys, so
+several keys pointing at one insight make a single request. Polling is floored at
+15 seconds.
+
+If PostHog rate-limits the project (HTTP 429), the plugin stops requesting for as
+long as the `Retry-After` header asks, or a minute if it gives no hint — for
+every key on that project, not just the one that hit the limit. Editing the
+connection settings clears the wait.
+
 ## Which number does it show?
 
 Insight results are not one shape, so the plugin probes in order of

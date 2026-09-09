@@ -47,9 +47,10 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	}
 
 	override async onKeyDown(ev: KeyDownEvent<InsightSettings>): Promise<void> {
-		// A press means "give me the number now", so skip the cache.
+		// A press means "give me the number now", so this is the one place that
+		// asks PostHog to recompute rather than serving its cached result.
 		const settings = this.#instances.get(ev.action.id)?.settings ?? ev.payload.settings;
-		if (await this.#render(ev.action, settings, { force: true })) {
+		if (await this.#render(ev.action, settings, { bypassCache: true, recalculate: true })) {
 			await ev.action.showOk();
 		}
 	}
@@ -59,7 +60,9 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 		for (const instance of this.actions) {
 			const tracked = this.#instances.get(instance.id);
 			if (tracked) {
-				await this.#render(instance, tracked.settings, { force: true });
+				// The connection changed, so the cached values are for the old one;
+				// PostHog's own cached results are still perfectly good.
+				await this.#render(instance, tracked.settings, { bypassCache: true });
 			}
 		}
 	}
@@ -113,10 +116,14 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 	 * Fetches and draws the current value.
 	 * @param target The key to draw on.
 	 * @param settings The key's settings.
-	 * @param options.force Bypass the value cache.
+	 * @param options Cache and recalculation behaviour, passed through to the client.
 	 * @returns `true` when a value was drawn, `false` when the key shows a problem.
 	 */
-	async #render(target: Target, settings: InsightSettings, options: { force?: boolean } = {}): Promise<boolean> {
+	async #render(
+		target: Target,
+		settings: InsightSettings,
+		options: { bypassCache?: boolean; recalculate?: boolean } = {},
+	): Promise<boolean> {
 		await whenSettingsReady();
 
 		const ref = parseInsightRef(settings.insight);
@@ -146,7 +153,9 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 
 		try {
 			const result = await fetchInsightValue(connection, ref, seriesIndex, options);
-			streamDeck.logger.debug(`Insight ${ref.shortId} returned ${result.value}`);
+			streamDeck.logger.debug(
+				`Insight ${ref.shortId} returned ${result.value} (${options.recalculate ? "recalculated" : "cached"})`,
+			);
 			const caption =
 				settings.showCaption === false
 					? undefined

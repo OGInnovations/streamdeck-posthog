@@ -13,6 +13,8 @@ export class PostHogError extends Error {
 	constructor(
 		message: string,
 		readonly status?: number,
+		/** Seconds PostHog asked us to wait, from a `Retry-After` header. */
+		readonly retryAfterSeconds?: number,
 	) {
 		super(message);
 		this.name = "PostHogError";
@@ -38,8 +40,18 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 
+/**
+ * When a project is rate limited, further requests to it are withheld until
+ * this time rather than adding to the flood. Keyed by host and project,
+ * because PostHog's limits apply to the key and project, not the insight.
+ */
+const backoff = new Map<string, { until: number; message: string }>();
+
 /** How long a fetched value is reused before another request is made. */
 const CACHE_TTL_MS = 10_000;
+
+/** How long to wait out a rate limit that came with no `Retry-After`. */
+const DEFAULT_BACKOFF_MS = 60_000;
 
 /** Requests are aborted rather than left hanging when PostHog is unreachable. */
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -66,7 +78,12 @@ async function request(connection: Connection, path: string): Promise<unknown> {
 	}
 
 	if (!response.ok) {
-		throw new PostHogError(describeStatus(response.status), response.status);
+		const retryAfter = Number(response.headers.get("retry-after"));
+		throw new PostHogError(
+			describeStatus(response.status),
+			response.status,
+			Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+		);
 	}
 
 	return response.json();
@@ -90,26 +107,38 @@ function describeStatus(status: number): string {
 /**
  * Fetches an insight and reduces it to a single value.
  *
- * PostHog moved insights under `/api/environments/` while keeping
- * `/api/projects/` working; we try projects first and fall back on 404 so the
- * plugin works across both self-hosted and cloud versions.
  * @param connection Host, key and project to read from.
  * @param ref The insight to read.
  * @param seriesIndex Which series of the insight to read.
- * @param options.force Bypass the short-lived cache, e.g. on a key press.
+ * @param options.bypassCache Ignore the plugin's short-lived value cache.
+ * @param options.recalculate Make PostHog recompute the insight rather than
+ * returning its cached result. Expensive, and it counts against the project's
+ * query capacity, so this belongs only on an explicit key press.
  * @returns The insight's current value.
  */
 export async function fetchInsightValue(
 	connection: Connection,
 	ref: InsightRef,
 	seriesIndex: number,
-	options: { force?: boolean } = {},
+	options: { bypassCache?: boolean; recalculate?: boolean } = {},
 ): Promise<InsightResult> {
-	const key = `${normaliseHost(connection.host)}|${connection.projectId}|${ref.shortId}|${seriesIndex}`;
+	const host = normaliseHost(connection.host);
+	const key = `${host}|${connection.projectId}|${ref.shortId}|${seriesIndex}`;
 	const now = Date.now();
 	const entry = cache.get(key);
 
-	if (!options.force && entry) {
+	// A rate-limited project stays rate limited for a while; polling through it
+	// only deepens the problem, so the wait is served from memory.
+	const paused = backoff.get(`${host}|${connection.projectId}`);
+	if (paused) {
+		if (paused.until > now) {
+			throw new PostHogError(paused.message, 429);
+		}
+		backoff.delete(`${host}|${connection.projectId}`);
+	}
+
+	const fresh = options.bypassCache === true || options.recalculate === true;
+	if (!fresh && entry) {
 		if (entry.inFlight) {
 			return entry.inFlight;
 		}
@@ -118,13 +147,20 @@ export async function fetchInsightValue(
 		}
 	}
 
-	const inFlight = load(connection, ref, seriesIndex)
+	const inFlight = load(connection, ref, seriesIndex, options.recalculate === true)
 		.then((value) => {
 			cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
 			return value;
 		})
-		.catch((err) => {
+		.catch((err: unknown) => {
 			cache.delete(key);
+			if (err instanceof PostHogError && err.status === 429) {
+				const wait = err.retryAfterSeconds ? err.retryAfterSeconds * 1000 : DEFAULT_BACKOFF_MS;
+				backoff.set(`${host}|${connection.projectId}`, {
+					until: Date.now() + wait,
+					message: err.message,
+				});
+			}
 			throw err;
 		});
 
@@ -132,27 +168,66 @@ export async function fetchInsightValue(
 	return inFlight;
 }
 
-async function load(connection: Connection, ref: InsightRef, seriesIndex: number): Promise<InsightResult> {
-	const query = `insights/?short_id=${encodeURIComponent(ref.shortId)}&refresh=true`;
-	let payload: unknown;
+/**
+ * Requests an insight.
+ *
+ * PostHog moved insights under `/api/environments/` while keeping
+ * `/api/projects/` working; projects is tried first and falls back on 404 so
+ * the plugin works across cloud and self-hosted versions.
+ *
+ * `refresh` makes PostHog recalculate the insight instead of returning what it
+ * has cached. Recalculation is expensive and counts against the project's
+ * query capacity, so polling must not ask for it — only an explicit key press
+ * does, along with the one retry below.
+ * @param connection Host, key and project to read from.
+ * @param shortId The insight's short ID.
+ * @param refresh Whether to make PostHog recalculate.
+ * @returns The parsed response body.
+ */
+async function requestInsight(connection: Connection, shortId: string, refresh: boolean): Promise<unknown> {
+	const params = new URLSearchParams({ short_id: shortId });
+	if (refresh) {
+		params.set("refresh", "true");
+	}
+	const query = `insights/?${params.toString()}`;
+
 	try {
-		payload = await request(connection, `/api/projects/${connection.projectId}/${query}`);
+		return await request(connection, `/api/projects/${connection.projectId}/${query}`);
 	} catch (err) {
 		if (err instanceof PostHogError && err.status === 404) {
-			payload = await request(connection, `/api/environments/${connection.projectId}/${query}`);
-		} else {
-			throw err;
+			return await request(connection, `/api/environments/${connection.projectId}/${query}`);
 		}
+		throw err;
 	}
+}
 
+/** Pulls the single insight out of a list response. */
+function firstInsight(payload: unknown): Record<string, unknown> {
 	const results = (payload as { results?: unknown[] } | null)?.results;
 	const insight = Array.isArray(results) ? results[0] : undefined;
 	if (!insight || typeof insight !== "object") {
 		throw new PostHogError("Insight not found");
 	}
+	return insight as Record<string, unknown>;
+}
 
-	const record = insight as Record<string, unknown>;
-	const extracted = extractValue(record.result, seriesIndex);
+async function load(
+	connection: Connection,
+	ref: InsightRef,
+	seriesIndex: number,
+	force: boolean,
+): Promise<InsightResult> {
+	let record = firstInsight(await requestInsight(connection, ref.shortId, force));
+	let extracted = extractValue(record.result, seriesIndex);
+
+	if (!extracted && !force) {
+		// An insight PostHog has never computed has an empty cached result. Ask
+		// it to calculate once, rather than showing an error until the user
+		// happens to open the insight in a browser.
+		record = firstInsight(await requestInsight(connection, ref.shortId, true));
+		extracted = extractValue(record.result, seriesIndex);
+	}
+
 	if (!extracted) {
 		throw new PostHogError("No numeric value in insight");
 	}
@@ -164,7 +239,8 @@ async function load(connection: Connection, ref: InsightRef, seriesIndex: number
 	};
 }
 
-/** Clears the value cache, e.g. after the connection settings change. */
+/** Clears the value cache and any rate-limit wait, e.g. after the connection settings change. */
 export function clearCache(): void {
 	cache.clear();
+	backoff.clear();
 }
