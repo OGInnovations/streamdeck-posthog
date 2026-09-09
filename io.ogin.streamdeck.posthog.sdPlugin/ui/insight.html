@@ -113,6 +113,37 @@
 		</div>
 
 		<hr />
+		<div class="section">Alerts</div>
+
+		<sdpi-item label="Alert when">
+			<sdpi-select setting="alertDirection" default="">
+				<option value="">Never</option>
+				<option value="above">Value rises to or above</option>
+				<option value="below">Value falls to or below</option>
+			</sdpi-select>
+		</sdpi-item>
+
+		<sdpi-item label="Warning at">
+			<sdpi-textfield setting="warnAt" placeholder="e.g. 100" maxlength="16"></sdpi-textfield>
+		</sdpi-item>
+
+		<sdpi-item label="Critical at">
+			<sdpi-textfield setting="criticalAt" placeholder="e.g. 250" maxlength="16"></sdpi-textfield>
+		</sdpi-item>
+		<div class="hint">
+			The key draws an amber or red border and colours the value to match. Either level can be
+			left blank. Set both and the more serious one wins.
+		</div>
+
+		<sdpi-item label="Notify">
+			<sdpi-checkbox setting="alertOnCross" label="Alert on the deck when it crosses"></sdpi-checkbox>
+		</sdpi-item>
+		<div class="hint">
+			Stream Deck's alert appears once when the value crosses into warning or critical, not on
+			every refresh.
+		</div>
+
+		<hr />
 		<div class="section">Number format</div>
 
 		<sdpi-item label="Abbreviate">

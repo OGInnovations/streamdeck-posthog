@@ -53,6 +53,12 @@ export const TREND_COLORS = { up: "#34D399", down: "#F87171", flat: "#9CA3AF" } 
 export const WARNING_COLOR = "#FBBF24";
 
 /**
+ * Colours for a value that has crossed a threshold. Mid-tone deliberately, so
+ * they stay legible against both the light and the dark themes.
+ */
+export const ALERT_COLORS = { warn: "#F59E0B", critical: "#EF4444" } as const;
+
+/**
  * Resolves the palette a key should render with.
  * @param name Theme chosen in the property inspector.
  * @param custom Colour overrides, used when `name` is `custom`; blank entries fall back to the dark theme.

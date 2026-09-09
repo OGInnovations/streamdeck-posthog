@@ -17,11 +17,14 @@ import { parseInsightRef } from "../posthog/insight-ref.js";
 import { renderError, renderSetup, renderValue, type KeyStyle } from "../render/key-image.js";
 import type { ThemeName } from "../render/theme.js";
 import { refreshInterval, type InsightSettings } from "../settings.js";
+import { alertLevel, type AlertLevel } from "../thresholds.js";
 
-/** Per-key state: the key's settings and its poll timer. */
+/** Per-key state: the key's settings, its poll timer and its last alert level. */
 type Instance = {
 	settings: InsightSettings;
 	timer: NodeJS.Timeout;
+	/** The level last drawn, so the deck alerts on crossing rather than on every poll. */
+	alert?: AlertLevel;
 };
 
 /**
@@ -88,7 +91,7 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 		);
 		// The timer must not keep the plugin process alive on its own.
 		timer.unref?.();
-		this.#instances.set(target.id, { settings, timer });
+		this.#instances.set(target.id, { settings, timer, alert: this.#instances.get(target.id)?.alert });
 
 		await this.#render(target, settings);
 	}
@@ -162,6 +165,7 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 				settings.showCaption === false
 					? undefined
 					: settings.label?.trim() || result.seriesLabel || result.insightName;
+			const alert = alertLevel(result.value, settings);
 
 			await this.#draw(
 				target,
@@ -171,10 +175,23 @@ export class InsightValue extends SingletonAction<InsightSettings> {
 						caption,
 						points: settings.showSparkline === false ? undefined : result.points,
 						delta: settings.showDelta ? changeFrom(result.points) : undefined,
+						alert,
 					},
 					style,
 				),
 			);
+
+			// Alerting on every poll would nag for as long as the value stays out
+			// of bounds, so the deck is only alerted when the level worsens.
+			const instance = this.#instances.get(target.id);
+			const worsened = alert === "critical" && instance?.alert !== "critical";
+			const entered = alert === "warn" && instance?.alert === undefined;
+			if (instance) {
+				instance.alert = alert;
+			}
+			if (settings.alertOnCross && (worsened || entered)) {
+				await target.showAlert();
+			}
 			return true;
 		} catch (err) {
 			const reason = err instanceof PostHogError ? err.message : "Refresh failed";

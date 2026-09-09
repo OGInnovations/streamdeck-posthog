@@ -55,6 +55,17 @@ export type InsightSettings = {
 	invertTrend?: boolean;
 	/** Cap on the value's font size; 0 or blank means auto. */
 	valueSize?: number;
+
+	/* Alerts */
+
+	/** Which way the value has to move to be a problem: `above`, `below`, or unset for no alerts. */
+	alertDirection?: string;
+	/** Value at which the key shows a warning. */
+	warnAt?: number | string;
+	/** Value at which the key shows a critical alert. */
+	criticalAt?: number | string;
+	/** Raise Stream Deck's alert on the key when it first crosses a threshold. */
+	alertOnCross?: boolean;
 };
 
 /** Lower bound on polling, to stay well inside PostHog's API rate limits. */

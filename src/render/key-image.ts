@@ -11,7 +11,7 @@
  * retina displays, and scales down cleanly for the hardware.
  */
 import { escapeXml, fitFontSize, measure, truncate } from "./text.js";
-import { resolveTheme, TREND_COLORS, WARNING_COLOR, type Theme, type ThemeName } from "./theme.js";
+import { ALERT_COLORS, resolveTheme, TREND_COLORS, WARNING_COLOR, type Theme, type ThemeName } from "./theme.js";
 
 const SIZE = 144;
 const PADDING = 10;
@@ -35,6 +35,8 @@ export type KeyContent = {
 	delta?: number;
 	/** Series points for the sparkline; omit to hide. */
 	points?: number[];
+	/** Threshold the value has crossed, if any. */
+	alert?: "warn" | "critical";
 };
 
 export type KeyStyle = {
@@ -98,10 +100,20 @@ export function renderValue(content: KeyContent, style: KeyStyle = {}): string {
 	const size = fitFontSize(content.value, CONTENT_WIDTH, Math.floor(cap), 20);
 	// Nudge down by roughly the cap height so the value sits optically centred.
 	const baseline = (top + bottom) / 2 + size * 0.36;
+	const alertColor = content.alert ? ALERT_COLORS[content.alert] : undefined;
 	layers.push(
-		`<text x="${SIZE / 2}" y="${baseline.toFixed(1)}" fill="${theme.value}" font-family="${FONTS}"` +
+		`<text x="${SIZE / 2}" y="${baseline.toFixed(1)}" fill="${alertColor ?? theme.value}" font-family="${FONTS}"` +
 			` font-size="${size}" font-weight="700" text-anchor="middle">${escapeXml(content.value)}</text>`,
 	);
+
+	if (alertColor) {
+		// A border rather than a background tint, so the alert reads the same on
+		// every theme and the value stays as legible as it was.
+		layers.push(
+			`<rect x="3" y="3" width="${SIZE - 6}" height="${SIZE - 6}" fill="none"` +
+				` stroke="${alertColor}" stroke-width="6"/>`,
+		);
+	}
 
 	return wrap(layers, style.devBadge === true);
 }

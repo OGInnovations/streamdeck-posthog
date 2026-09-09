@@ -51,6 +51,30 @@ series. The final point of a PostHog trend is usually the period still in
 progress, so it reads as "today so far versus yesterday" rather than a
 like-for-like comparison — which is why it is off by default.
 
+## Alerts
+
+A key showing a number is passive: you have to be looking at it, and you have to
+know what a normal number looks like. Give a key a threshold and it tells you
+when to look.
+
+Pick a direction — whether the value is a problem when it **rises** or when it
+**falls** — then set a warning level, a critical level, or both. Past a level the
+key draws an amber or red border and colours the value to match, which reads the
+same on every theme. Either level can be left blank.
+
+| Direction | Warning at | Critical at | Reads as |
+| --- | --- | --- | --- |
+| rises to or above | 100 | 250 | queue depth, error count, spend |
+| falls to or below | 99 | 95 | uptime, conversion rate, cache hit rate |
+
+Setting both levels the wrong way round is harmless: a value past both always
+reports critical.
+
+**Notify** additionally raises Stream Deck's own alert on the key, once, when
+the value crosses into warning or critical — not on every refresh, so an
+out-of-bounds metric does not nag indefinitely. It alerts again if the value
+later worsens from warning to critical.
+
 ## How often it asks PostHog, and for what
 
 PostHog can either return an insight's cached result or recompute it. Recomputing

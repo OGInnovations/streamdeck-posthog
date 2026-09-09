@@ -125,3 +125,28 @@ describe("development build marker", () => {
 		assert.doesNotMatch(svgOf(renderError("Nope")), STRIPE);
 	});
 });
+
+describe("threshold alerts", () => {
+	it("borders the key and colours the value amber at warning", () => {
+		const svg = svgOf(renderValue({ value: "120", alert: "warn" }));
+		assert.match(svg, /#F59E0B/);
+		assert.match(svg, /stroke-width="6"/);
+	});
+
+	it("uses red at critical", () => {
+		const svg = svgOf(renderValue({ value: "300", alert: "critical" }));
+		assert.match(svg, /#EF4444/);
+	});
+
+	it("leaves a value within bounds untouched", () => {
+		const svg = svgOf(renderValue({ value: "50" }));
+		assert.doesNotMatch(svg, /#F59E0B|#EF4444/);
+		assert.doesNotMatch(svg, /stroke-width="6"/);
+	});
+
+	it("keeps the alert border on top of the theme, whichever theme it is", () => {
+		for (const theme of ["dark", "light", "posthog", "midnight", "mint"] as const) {
+			assert.match(svgOf(renderValue({ value: "300", alert: "critical" }, { theme })), /#EF4444/);
+		}
+	});
+});
