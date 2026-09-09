@@ -70,8 +70,12 @@ First release.
 | Gallery 1 | `gallery-1-anatomy.png` | 1920 × 960 |
 | Gallery 2 | `gallery-2-themes.png` | 1920 × 960 |
 | Gallery 3 | `gallery-3-setup.png` | 1920 × 960 |
-| Plugin icon | `../../io.ogin.streamdeck.posthog.sdPlugin/imgs/plugin/marketplace.png` | 256 × 256 |
-| Plugin icon @2x | `../../io.ogin.streamdeck.posthog.sdPlugin/imgs/plugin/marketplace@2x.png` | 512 × 512 |
+| App icon | `app-icon.png` | 288 × 288 |
+
+The listing's app icon is a separate upload from the icon inside the plugin
+bundle, and takes PNG or JPG up to 2 MB at a recommended 288 × 288. The bundle's
+own icon — 256 × 256 and 512 × 512 per Elgato's plugin guidelines — is already
+inside the uploaded `.streamDeckPlugin` and needs no separate upload.
 
 Elgato requires one thumbnail and at least three gallery items. An optional
 video would be 1920 × 1080 MP4 under 50 MB.

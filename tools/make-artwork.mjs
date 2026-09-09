@@ -186,6 +186,15 @@ for (const [image, name] of [
 	written[written.length - 1] = `${name} (${image.width}x${image.height})`;
 }
 
+// The Maker Console's listing has its own app-icon upload, separate from the
+// icon inside the plugin bundle, and recommends 288x288. Rendered at 576 so
+// the rasteriser is accurate, then halved to land exactly on 288.
+const listingIcon = downscale(rasterise(pluginIcon(576), 576), 2);
+const listingTarget = join(ROOT, "docs", "marketplace", "app-icon.png");
+mkdirSync(dirname(listingTarget), { recursive: true });
+writeFileSync(listingTarget, encode(listingIcon.width, listingIcon.height, listingIcon.rgba));
+written.push(`docs/marketplace/app-icon.png (${listingIcon.width}x${listingIcon.height})`);
+
 // The SVG the PNGs came from, kept as the editable source but outside the
 // .sdPlugin directory so it is not shipped inside the plugin.
 const source = join(ROOT, "docs", "artwork", "plugin-icon.svg");
